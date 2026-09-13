@@ -371,7 +371,9 @@
 <script>
 const ADMIN_EMAIL = "tomasarcosta@gmail.com";
 const GOOGLE_CLIENT_ID = "546037907317-b02a4e90feiv6t0i0v52s6pp9okv3lgf.apps.googleusercontent.com";
-const GROQ_API_KEY = "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"; // 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
+const GROQ_API_KEY = "PÕE_AQUI_A_TUA_CHAVE_GROQ"; // cola a tua chave gsk_... aqui
+const OPENROUTER_API_KEY = "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";
+const OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free"; // troca por outro modelo do OpenRouter se quiseres
 
 let state = {
   email: null, isGuest: false, credits: 0, groqKey: null,
@@ -632,6 +634,24 @@ async function callAI(prompt, system) {
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error.message || 'Erro Groq');
+    return data.choices && data.choices[0] ? data.choices[0].message.content : "";
+  }
+  if (OPENROUTER_API_KEY && !OPENROUTER_API_KEY.includes("PÕE_AQUI")) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + OPENROUTER_API_KEY,
+        "HTTP-Referer": "https://luacreater.local",
+        "X-Title": "LuaCreater"
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }]
+      })
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || 'Erro OpenRouter');
     return data.choices && data.choices[0] ? data.choices[0].message.content : "";
   }
   const response = await fetch("https://api.anthropic.com/v1/messages", {
