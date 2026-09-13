@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>LuaCreater</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg-0: #0B0D10;
+    --bg-1: #12151a;
+    --bg-2: #171b21;
+    --bg-3: #1e232a;
+    --border: #23282f;
+    --border-strong: #323944;
+    --text-1: #eef0f3;
+    --text-2: #9aa3b2;
+    --text-3: #636c7a;
+    --accent: #6c8dff;
+    --accent2: #a78bfa;
+    --accent-glow: rgba(108,141,255,0.16);
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-0);
+    color: var(--text-1);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; }
+  ::selection { background: var(--accent-glow); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .btn {
+    background: var(--accent);
+    color: #0b0d11;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter .12s ease, transform .06s ease;
+  }
+  .btn:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn:active:not(:disabled) { transform: scale(.98); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.secondary { background: transparent; border: 1px solid var(--border-strong); color: var(--text-2); }
+  .btn.secondary:hover:not(:disabled) { background: var(--bg-3); filter: none; }
+  .btn.ghost { background: transparent; border: none; color: var(--text-2); padding: 6px 10px; }
+  .btn.ghost:hover { background: var(--bg-3); filter: none; }
+  .btn.icon-only { padding: 7px 9px; }
+  input, select, textarea { font-family: inherit; }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  /* ---------- LOGIN ---------- */
+  #screen-login {
+    display: none; height: 100vh; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 0%, #151a24 0%, var(--bg-0) 62%);
+  }
+  .login-box {
+    background: var(--bg-1); border: 1px solid var(--border); border-radius: 16px;
+    padding: 34px 30px; width: 380px; text-align: center;
+    box-shadow: 0 24px 70px rgba(0,0,0,.4);
+  }
+  .brand-mark { width: 46px; height: 46px; border-radius: 12px; margin: 0 auto 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .login-box h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .login-box .sub { color: var(--text-2); font-size: 13.5px; margin: 0 0 24px; }
+  .login-box .btn { width: 100%; margin-top: 10px; }
+  .login-box input { width: 100%; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--border-strong);
+    background: var(--bg-2); color: var(--text-1); margin-top: 8px; font-size: 13.5px; }
+  .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0 4px; color: var(--text-3); font-size: 11.5px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .hint { font-size: 11.5px; color: var(--text-3); margin-top: 14px; line-height: 1.5; }
+  .key-block { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; text-align: left; }
+  .key-block label { font-size: 11.5px; color: var(--text-3); display: block; margin-bottom: 4px; }
+  #google-btn-container { display: flex; justify-content: center; margin-top: 6px; }
+
+  /* ---------- DASHBOARD ---------- */
+  #screen-dashboard { display: none; height: 100vh; overflow-y: auto; }
+  .dash-topbar {
+    height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    justify-content: space-between; padding: 0 28px; position: sticky; top: 0; background: var(--bg-0); z-index: 5;
+  }
+  .brand-row { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15.5px; }
+  .brand-row .brand-mark { width: 24px; height: 24px; border-radius: 6px; margin: 0; }
+  .credits-pill {
+    display: flex; align-items: center; gap: 10px; background: var(--bg-2); border: 1px solid var(--border);
+    padding: 6px 8px 6px 14px; border-radius: 999px; font-size: 12.5px; color: var(--text-2);
+  }
+  .credits-pill b { color: var(--green); font-weight: 700; }
+  .credits-pill .upgrade { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0b0d11;
+    font-weight: 700; padding: 5px 12px; border-radius: 999px; font-size: 11.5px; cursor: pointer; }
+  .dash-content { max-width: 980px; margin: 0 auto; padding: 40px 28px 80px; }
+  .dash-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+  .dash-hero h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; letter-spacing: -.01em; }
+  .dash-hero p { color: var(--text-2); font-size: 13.5px; margin: 0; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-2); text-transform: uppercase;
+    letter-spacing: .05em; margin: 32px 0 14px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .dash-card {
+    background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    cursor: pointer; transition: border-color .12s ease, transform .08s ease;
+  }
+  .dash-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .dash-card i { font-size: 18px; color: var(--accent); margin-bottom: 10px; display: block; }
+  .dash-card .t { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .dash-card .s { font-size: 12px; color: var(--text-3); }
+  .history-row {
+    display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
+    background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+  }
+  .history-row .left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .history-row .fav { color: var(--text-3); cursor: pointer; font-size: 14px; }
+  .history-row .fav.active { color: var(--amber); }
+  .history-row .name { font-size: 13.5px; font-weight: 500; }
+  .history-row .meta { font-size: 11.5px; color: var(--text-3); }
+  .empty-note { color: var(--text-3); font-size: 13px; padding: 10px 2px; }
+
+  /* ---------- WORKSPACE ---------- */
+  #screen-workspace { display: none; height: 100vh; flex-direction: column; }
+  .ws-topbar {
+    height: 52px; border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    padding: 0 14px; gap: 14px; flex-shrink: 0; background: var(--bg-0);
+  }
+  .tabs-strip { flex: 1; display: flex; align-items: center; gap: 4px; overflow-x: auto; height: 100%; }
+  .tab-item {
+    display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 34px; border-radius: 8px;
+    font-size: 12.5px; color: var(--text-2); cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    border: 1px solid transparent;
+  }
+  .tab-item.active { background: var(--bg-2); color: var(--text-1); border-color: var(--border); }
+  .tab-item:hover:not(.active) { background: var(--bg-1); }
+  .tab-item .x { opacity: .5; }
+  .tab-item .x:hover { opacity: 1; color: var(--red); }
+  .ws-body { flex: 1; display: flex; min-height: 0; }
+
+  #sidebar {
+    width: 240px; background: var(--bg-1); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0; resize: horizontal; overflow: hidden; min-width: 160px; max-width: 400px;
+  }
+  #sidebar.collapsed { width: 0 !important; min-width: 0; border: none; }
+  .sidebar-head { padding: 12px 12px 8px; border-bottom: 1px solid var(--border); }
+  .sidebar-search { width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 7px;
+    padding: 7px 10px; font-size: 12.5px; color: var(--text-1); }
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 10px 8px; }
+  .sidebar-body h3 { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-3); margin: 14px 6px 6px; }
+  .tree-item {
+    display: flex; align-items: center; gap: 7px; padding: 5px 7px; border-radius: 6px; font-size: 12.5px;
+    color: var(--text-2); cursor: pointer; user-select: none;
+  }
+  .tree-item:hover { background: var(--bg-3); }
+  .tree-item.file { color: #b8ddb0; }
+  .tree-item .caret { width: 10px; font-size: 9px; opacity: .6; text-align: center; }
+  .dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+  .history-mini { font-size: 11.5px; color: var(--text-3); padding: 0 6px; }
+  .history-mini div { padding: 5px 0; border-bottom: 1px solid var(--border); color: var(--text-2); }
+
+  #editor-area { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-0); }
+  .editor-toolbar { height: 42px; border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    gap: 4px; padding: 0 10px; flex-shrink: 0; }
+  .editor-toolbar .spacer { flex: 1; }
+  .CodeMirror { height: 100% !important; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; }
+  #editor-wrap { flex: 1; min-height: 0; position: relative; }
+  #empty-editor { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-3); font-size: 13.5px; flex-direction: column; gap: 10px; }
+  #empty-editor i { font-size: 30px; opacity: .4; }
+
+  #bottom-panel { height: 150px; border-top: 1px solid var(--border); background: var(--bg-1); display: flex; flex-direction: column; flex-shrink: 0; resize: vertical; overflow: auto; min-height: 60px; max-height: 380px; }
+  .bottom-tabs { display: flex; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid var(--border); }
+  .bottom-tab { padding: 6px 12px; font-size: 12px; color: var(--text-3); cursor: pointer; border-radius: 6px 6px 0 0; }
+  .bottom-tab.active { color: var(--text-1); background: var(--bg-2); }
+  .bottom-content { flex: 1; overflow-y: auto; padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--text-2); }
+  .bottom-content .warn { color: var(--amber); }
+  .bottom-content .err { color: var(--red); }
+  .bottom-content .ok { color: var(--green); }
+
+  #ai-panel { width: 340px; background: var(--bg-1); border-left: 1px solid var(--border); flex-shrink: 0;
+    display: flex; flex-direction: column; resize: horizontal; overflow: auto; min-width: 260px; max-width: 520px; direction: rtl; }
+  #ai-panel > * { direction: ltr; }
+  .ai-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .ai-head i { color: var(--accent); font-size: 15px; }
+  .ai-head span { font-weight: 600; font-size: 13.5px; }
+  .ai-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .ai-label { font-size: 12px; font-weight: 500; color: var(--text-2); display: block; margin-bottom: 8px; }
+  #ai-prompt { width: 100%; min-height: 90px; background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text-1); padding: 12px; font-size: 13.5px; line-height: 1.5; resize: vertical; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 18px; }
+  .chip { background: var(--bg-2); border: 1px solid var(--border); color: var(--text-2); font-size: 11.5px;
+    padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+  .chip:hover { border-color: var(--border-strong); color: var(--text-1); }
+  .opt-row { margin-bottom: 12px; }
+  .opt-row select { width: 100%; background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 12.5px; }
+  #ai-generate { width: 100%; margin-top: 6px; }
+  #progress-wrap { display: none; margin-top: 16px; }
+  #progress-bar-bg { background: var(--bg-2); border-radius: 999px; height: 6px; overflow: hidden; }
+  #progress-bar { background: linear-gradient(90deg, var(--accent), var(--accent2)); height: 100%; width: 0%; transition: width .3s ease; border-radius: 999px; }
+  #progress-label { font-size: 11.5px; color: var(--text-3); margin-top: 7px; }
+  #double-btn { width: 100%; margin-top: 8px; }
+
+  #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
+  .toast { background: var(--bg-2); border: 1px solid var(--border-strong); color: var(--text-1); padding: 11px 16px;
+    border-radius: 9px; font-size: 12.5px; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: flex; align-items: center; gap: 8px;
+    animation: toast-in .18s ease; }
+  .toast i { color: var(--green); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div id="screen-login">
+  <div class="login-box">
+    <div class="brand-mark"></div>
+    <h2>LuaCreater</h2>
+    <p class="sub">A tua IDE de IA para criar jogos Roblox.</p>
+    <input id="email-input" placeholder="o-teu-email@gmail.com" style="display:none;" />
+    <div id="google-btn-container"></div>
+    <button id="fallback-google-btn" class="btn secondary" style="display:none;" onclick="alert('Configura o CLIENT_ID do Google no código.')">Continuar com o Google</button>
+    <div class="divider">ou</div>
+    <button class="btn secondary" onclick="loginAsGuest()">Continuar sem conta</button>
+    <p class="hint">Convidados recebem 10 créditos guardados neste dispositivo.</p>
+  </div>
+</div>
+
+<div id="screen-dashboard">
+  <div class="dash-topbar">
+    <div class="brand-row"><div class="brand-mark"></div> LuaCreater</div>
+    <div class="credits-pill">
+      <span id="user-email-dash" style="color:var(--text-3);"></span>
+      <span><b id="credits-value">10</b> créditos</span>
+      <span class="upgrade">Upgrade</span>
+    </div>
+  </div>
+  <div class="dash-content">
+    <div class="dash-hero">
+      <div>
+        <h1>Bem-vindo de volta</h1>
+        <p>Cria sistemas completos para Roblox em minutos.</p>
+      </div>
+      <button class="btn" onclick="openWorkspace()"><i class="fa fa-plus" aria-hidden="true" style="margin-right:6px;"></i>Novo projeto</button>
+    </div>
+
+    <div class="section-title">Templates</div>
+    <div class="card-grid">
+      <div class="dash-card" onclick="openWorkspace('Cria um sistema de moedas')"><i class="fa fa-money" aria-hidden="true"></i><div class="t">Sistema de moedas</div><div class="s">Economia básica de jogo</div></div>
+      <div class="dash-card" onclick="openWorkspace('Cria um sistema de inventário')"><i class="fa fa-suitcase" aria-hidden="true"></i><div class="t">Inventário</div><div class="s">Guardar e usar itens</div></div>
+      <div class="dash-card" onclick="openWorkspace('Cria uma loja com itens compráveis')"><i class="fa fa-shopping-cart" aria-hidden="true"></i><div class="t">Loja</div><div class="s">Compra de itens com moeda</div></div>
+      <div class="dash-card" onclick="openWorkspace('Cria um sistema de XP e níveis')"><i class="fa fa-line-chart" aria-hidden="true"></i><div class="t">XP e níveis</div><div class="s">Progressão do jogador</div></div>
+      <div class="dash-card" onclick="openWorkspace('Cria um sistema de combate')"><i class="fa fa-crosshairs" aria-hidden="true"></i><div class="t">Combate</div><div class="s">Dano e vida entre jogadores</div></div>
+    </div>
+
+    <div class="section-title">Gerações recentes</div>
+    <div id="dash-history"><div class="empty-note">Ainda não geraste nenhum script.</div></div>
+  </div>
+</div>
+
+<div id="screen-workspace">
+  <div class="ws-topbar">
+    <button class="btn ghost icon-only" onclick="toggleSidebar()"><i class="fa fa-bars" aria-hidden="true"></i></button>
+    <button class="btn ghost icon-only" onclick="goDashboard()"><i class="fa fa-home" aria-hidden="true"></i></button>
+    <div class="tabs-strip" id="tabs-strip"></div>
+    <div class="credits-pill">
+      <span><b id="credits-value-ws">10</b> créditos</span>
+    </div>
+  </div>
+  <div class="ws-body">
+    <div id="sidebar">
+      <div class="sidebar-head"><input class="sidebar-search" placeholder="Pesquisar no Explorer..." oninput="filterTree(this.value)" /></div>
+      <div class="sidebar-body">
+        <h3>Explorer</h3>
+        <div id="tree-container"></div>
+        <h3>Histórico</h3>
+        <div class="history-mini" id="history-mini-list">Sem gerações ainda.</div>
+      </div>
+    </div>
+
+    <div id="editor-area">
+      <div class="editor-toolbar">
+        <button class="btn ghost icon-only" title="Executar (pré-visualização)" onclick="runScript()"><i class="fa fa-play" aria-hidden="true"></i></button>
+        <button class="btn ghost icon-only" title="Copiar" onclick="copyActive()"><i class="fa fa-copy" aria-hidden="true"></i></button>
+        <button class="btn ghost icon-only" title="Guardar (.lua)" onclick="saveActive()"><i class="fa fa-download" aria-hidden="true"></i></button>
+        <button class="btn ghost icon-only" title="Formatar" onclick="formatActive()"><i class="fa fa-magic" aria-hidden="true"></i></button>
+        <button class="btn ghost icon-only" title="Desfazer" onclick="cmAction('undo')"><i class="fa fa-undo" aria-hidden="true"></i></button>
+        <button class="btn ghost icon-only" title="Refazer" onclick="cmAction('redo')"><i class="fa fa-repeat" aria-hidden="true"></i></button>
+        <button class="btn ghost icon-only" title="Pesquisar (Ctrl+F)" onclick="cmAction('find')"><i class="fa fa-search" aria-hidden="true"></i></button>
+        <div class="spacer"></div>
+      </div>
+      <div id="editor-wrap">
+        <div id="empty-editor"><i class="fa fa-code" aria-hidden="true"></i>Nenhum script aberto. Usa o assistente à direita para gerar um.</div>
+        <textarea id="cm-textarea" style="display:none;"></textarea>
+      </div>
+      <div id="bottom-panel">
+        <div class="bottom-tabs">
+          <div class="bottom-tab active" data-tab="output" onclick="switchBottomTab('output')">Output</div>
+          <div class="bottom-tab" data-tab="warnings" onclick="switchBottomTab('warnings')">Warnings</div>
+          <div class="bottom-tab" data-tab="errors" onclick="switchBottomTab('errors')">Errors</div>
+        </div>
+        <div class="bottom-content" id="bottom-content">Pronto.</div>
+      </div>
+    </div>
+
+    <div id="ai-panel">
+      <div class="ai-head"><i class="fa fa-magic" aria-hidden="true"></i><span>AI Assistant</span></div>
+      <div class="ai-body">
+        <label class="ai-label">O que queres criar?</label>
+        <textarea id="ai-prompt" placeholder="Ex: um sistema de loja com moeda e itens compráveis"></textarea>
+        <div class="chip-row">
+          <div class="chip" onclick="setPrompt('Cria um sistema de moedas')">Sistema de moedas</div>
+          <div class="chip" onclick="setPrompt('Cria um sistema de inventário')">Inventário</div>
+          <div class="chip" onclick="setPrompt('Cria uma loja com itens')">Loja com itens</div>
+          <div class="chip" onclick="setPrompt('Cria um sistema de XP e níveis')">XP e níveis</div>
+          <div class="chip" onclick="setPrompt('Cria um sistema de combate')">Combate</div>
+        </div>
+
+        <div class="opt-row"><label class="ai-label">Tipo de script</label>
+          <select id="opt-type"><option value="Server">Server</option><option value="Local">Local</option><option value="Module">Module</option></select>
+        </div>
+        <div class="opt-row"><label class="ai-label">Localização</label>
+          <select id="opt-location">
+            <option>ServerScriptService</option><option>StarterPlayerScripts</option>
+            <option>StarterCharacterScripts</option><option>StarterGui</option><option>Workspace</option>
+          </select>
+        </div>
+        <div class="opt-row"><label class="ai-label">Complexidade</label>
+          <select id="limit-select">
+            <option value="7">Avançado</option>
+            <option value="5" selected>Normal</option>
+            <option value="4">Simples</option>
+          </select>
+        </div>
+
+        <button class="btn" id="generate-btn" onclick="startPipeline()">Gerar código</button>
+        <button class="btn secondary" id="double-btn" onclick="doubleWork()" disabled>Dobrar trabalho ⨯2</button>
+
+        <div id="progress-wrap">
+          <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+          <div id="progress-label">A processar...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/lua/lua.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script>
+const ADMIN_EMAIL = "tomasarcosta@gmail.com";
+const GOOGLE_CLIENT_ID = "546037907317-b02a4e90feiv6t0i0v52s6pp9okv3lgf.apps.googleusercontent.com";
+const GROQ_API_KEY = "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"; // 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
+
+let state = {
+  email: null, isGuest: false, credits: 0, groqKey: null,
+  doubleMultiplier: 1, tabs: [], activeTabId: null, history: []
+};
+let cm = null;
+let tabCounter = 0;
+
+function toast(msg, icon) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<i class="fa ${icon || 'fa-check-circle'}" aria-hidden="true"></i><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/* ---------- AUTH ---------- */
+function parseJwt(token) {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+}
+function handleGoogleCredential(response) {
+  const payload = parseJwt(response.credential);
+  state.email = payload.email;
+  state.isGuest = false;
+  state.credits = (payload.email === ADMIN_EMAIL) ? Infinity : 10;
+  enterApp();
+}
+function initGoogleLogin() {
+  if (!window.google || !window.location.protocol.startsWith('http') || GOOGLE_CLIENT_ID.includes("PÕE_AQUI")) {
+    document.getElementById('fallback-google-btn').style.display = 'block';
+    return;
+  }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+  google.accounts.id.renderButton(document.getElementById('google-btn-container'),
+    { theme: 'filled_black', size: 'large', width: 300, text: 'continue_with' });
+}
+function loadGuestCredits() {
+  const s = localStorage.getItem('lc_guest_credits');
+  return s !== null ? parseFloat(s) : 10;
+}
+function saveGuestCredits(v) { localStorage.setItem('lc_guest_credits', v.toFixed(2)); }
+function loginAsGuest() {
+  state.email = null; state.isGuest = true;
+  state.credits = loadGuestCredits();
+  enterApp();
+}
+function enterApp() {
+  document.getElementById('screen-login').style.display = 'none';
+  loadHistory();
+  goDashboard();
+}
+
+/* ---------- NAVIGATION ---------- */
+function goDashboard() {
+  document.getElementById('screen-workspace').style.display = 'none';
+  document.getElementById('screen-dashboard').style.display = 'block';
+  document.getElementById('user-email-dash').textContent = state.isGuest ? 'Convidado' : state.email;
+  updateCreditsDisplay();
+  renderDashHistory();
+}
+function openWorkspace(prefillPrompt) {
+  document.getElementById('screen-dashboard').style.display = 'none';
+  document.getElementById('screen-workspace').style.display = 'flex';
+  updateCreditsDisplay();
+  if (!cm) initEditor();
+  if (prefillPrompt) document.getElementById('ai-prompt').value = prefillPrompt;
+  renderHistoryMini();
+}
+function updateCreditsDisplay() {
+  const val = state.credits === Infinity ? '∞' : state.credits.toFixed(2);
+  document.getElementById('credits-value').textContent = val;
+  document.getElementById('credits-value-ws').textContent = val;
+  if (state.isGuest) saveGuestCredits(state.credits);
+}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+
+/* ---------- EXPLORER TREE ---------- */
+const TREE = [
+  {name:'Workspace', color:'#3b9dd6'},
+  {name:'Players', color:'#d65f5f'},
+  {name:'Lighting', color:'#f2c14e'},
+  {name:'ReplicatedFirst', color:'#e08a3e'},
+  {name:'ReplicatedStorage', color:'#e0a23e'},
+  {name:'ServerScriptService', color:'#3ea25f'},
+  {name:'ServerStorage', color:'#3ea25f'},
+  {name:'StarterGui', color:'#e0c23e'},
+  {name:'StarterPack', color:'#e0c23e'},
+  {name:'StarterPlayer', color:'#e0c23e', children:['StarterCharacterScripts','StarterPlayerScripts']},
+  {name:'Teams', color:'#8a8f98'},
+  {name:'SoundService', color:'#3b6fd6'},
+];
+function renderTree() {
+  const c = document.getElementById('tree-container');
+  c.innerHTML = '';
+  TREE.forEach(node => {
+    const row = document.createElement('div');
+    row.className = 'tree-item';
+    row.oncontextmenu = (e) => { e.preventDefault(); showTreeMenu(e, node.name); };
+    row.innerHTML = `<span class="caret">${node.children ? '▾' : '▸'}</span><span class="dot" style="background:${node.color}"></span>${node.name}`;
+    c.appendChild(row);
+    if (node.children) {
+      node.children.forEach(ch => {
+        const sub = document.createElement('div');
+        sub.className = 'tree-item';
+        sub.style.marginLeft = '16px';
+        sub.oncontextmenu = (e) => { e.preventDefault(); showTreeMenu(e, ch); };
+        sub.innerHTML = `<span class="caret">▸</span><span class="dot" style="background:${node.color}"></span>${ch}`;
+        c.appendChild(sub);
+      });
+    }
+  });
+}
+function showTreeMenu(e, parentName) {
+  const options = ['Script', 'LocalScript', 'ModuleScript', 'Folder'];
+  const choice = prompt(`Criar em ${parentName} — escreve um: ${options.join(', ')}`);
+  if (choice && options.includes(choice)) {
+    createTab(`Novo${choice}`, choice === 'Script' ? '-- Server script\n' : choice === 'LocalScript' ? '-- Local script\n' : '-- Module\nlocal M = {}\nreturn M\n', parentName);
+    toast(`${choice} criado em ${parentName}`, 'fa-plus-circle');
+  }
+}
+function filterTree(q) {
+  document.querySelectorAll('#tree-container .tree-item').forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(q.toLowerCase()) ? 'flex' : 'none';
+  });
+}
+function addTreeFile(parentColorHex, label) {
+  const c = document.getElementById('tree-container');
+  const el = document.createElement('div');
+  el.className = 'tree-item file';
+  el.style.marginLeft = '16px';
+  el.innerHTML = `<span class="caret">◆</span>${label}`;
+  c.appendChild(el);
+}
+
+/* ---------- EDITOR / TABS ---------- */
+function initEditor() {
+  cm = CodeMirror.fromTextArea(document.getElementById('cm-textarea'), {
+    mode: 'lua', theme: 'dracula', lineNumbers: true, matchBrackets: true,
+    indentUnit: 4, tabSize: 4, styleActiveLine: true
+  });
+  cm.on('change', () => {
+    const t = state.tabs.find(t => t.id === state.activeTabId);
+    if (t) t.content = cm.getValue();
+  });
+}
+function createTab(name, content, location) {
+  tabCounter++;
+  const tab = { id: 'tab' + tabCounter, name, content, location: location || 'ServerScriptService' };
+  state.tabs.push(tab);
+  setActiveTab(tab.id);
+  renderTabs();
+  addTreeFile('', name);
+}
+function setActiveTab(id) {
+  state.activeTabId = id;
+  const tab = state.tabs.find(t => t.id === id);
+  document.getElementById('empty-editor').style.display = tab ? 'none' : 'flex';
+  document.querySelector('.CodeMirror') && (document.querySelector('.CodeMirror').style.display = tab ? 'block' : 'none');
+  if (tab && cm) { cm.setValue(tab.content); setTimeout(() => cm.refresh(), 10); }
+  renderTabs();
+}
+function closeTab(id, ev) {
+  if (ev) ev.stopPropagation();
+  state.tabs = state.tabs.filter(t => t.id !== id);
+  if (state.activeTabId === id) {
+    const next = state.tabs[state.tabs.length - 1];
+    setActiveTab(next ? next.id : null);
+  }
+  renderTabs();
+}
+function renderTabs() {
+  const strip = document.getElementById('tabs-strip');
+  strip.innerHTML = '';
+  state.tabs.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'tab-item' + (t.id === state.activeTabId ? ' active' : '');
+    el.onclick = () => setActiveTab(t.id);
+    el.innerHTML = `<i class="fa fa-file-code-o" aria-hidden="true"></i>${t.name}<span class="x" onclick="closeTab('${t.id}', event)">✕</span>`;
+    strip.appendChild(el);
+  });
+}
+function cmAction(name) {
+  if (!cm) return;
+  if (name === 'find') cm.execCommand('find');
+  else cm.execCommand(name);
+}
+function copyActive() {
+  const t = state.tabs.find(t => t.id === state.activeTabId);
+  if (!t) return toast('Nenhum script aberto.', 'fa-exclamation-circle');
+  navigator.clipboard.writeText(t.content);
+  toast('Script copiado', 'fa-copy');
+}
+function saveActive() {
+  const t = state.tabs.find(t => t.id === state.activeTabId);
+  if (!t) return toast('Nenhum script aberto.', 'fa-exclamation-circle');
+  const blob = new Blob([t.content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = t.name.replace(/\s+/g, '') + '.lua';
+  a.click();
+  toast('Script guardado', 'fa-download');
+}
+function formatActive() {
+  if (!cm) return;
+  const lines = cm.getValue().split('\n').map(l => l.trim());
+  let depth = 0;
+  const out = lines.map(l => {
+    if (/^(end|else|elseif)/.test(l)) depth = Math.max(0, depth - 1);
+    const s = '    '.repeat(depth) + l;
+    if (/\b(then|do|function)\s*$/.test(l) || /^(else|elseif)/.test(l)) depth++;
+    return s;
+  });
+  cm.setValue(out.join('\n'));
+  toast('Código formatado', 'fa-magic');
+}
+function runScript() {
+  const t = state.tabs.find(t => t.id === state.activeTabId);
+  if (!t) return toast('Nenhum script aberto.', 'fa-exclamation-circle');
+  const opens = (t.content.match(/\b(then|do|function)\b/g) || []).length;
+  const closes = (t.content.match(/\bend\b/g) || []).length;
+  const warnEl = document.getElementById('bottom-content');
+  switchBottomTab('output');
+  let msg = 'Pré-visualização: este código deve ser testado no Roblox Studio (não corre no browser).\n';
+  if (opens !== closes) msg += `<span class="warn">Aviso: possível bloco "then/do/function" sem "end" correspondente (${opens} aberturas, ${closes} fechos).</span>`;
+  else msg += '<span class="ok">Blocos then/do/function e end parecem equilibrados.</span>';
+  warnEl.innerHTML = msg;
+}
+function switchBottomTab(name) {
+  document.querySelectorAll('.bottom-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+}
+
+/* ---------- AI PIPELINE ---------- */
+function setPrompt(p) { document.getElementById('ai-prompt').value = p; }
+
+function costForLines(lines) {
+  if (lines <= 30) return 0.22;
+  if (lines <= 85) return 0.78;
+  if (lines <= 150) return 1.13;
+  if (lines <= 200) return 1.78;
+  if (lines <= 275) return 2.25;
+  if (lines <= 325) return 2.86;
+  if (lines <= 400) return 3.47;
+  if (lines <= 500) return 4.03;
+  return 5.72;
+}
+
+async function callAI(prompt, system) {
+  if (GROQ_API_KEY && !GROQ_API_KEY.includes("PÕE_AQUI")) {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }]
+      })
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message || 'Erro Groq');
+    return data.choices && data.choices[0] ? data.choices[0].message.content : "";
+  }
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: system || undefined,
+      messages: [{ role: "user", content: prompt }] })
+  });
+  const data = await response.json();
+  const block = (data.content || []).find(b => b.type === "text");
+  return block ? block.text : "";
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label || (pct + '%');
+}
+
+function loadHistory() {
+  try { state.history = JSON.parse(localStorage.getItem('lc_history') || '[]'); } catch(e) { state.history = []; }
+}
+function saveHistory() { localStorage.setItem('lc_history', JSON.stringify(state.history)); }
+function renderDashHistory() {
+  const el = document.getElementById('dash-history');
+  if (!state.history.length) { el.innerHTML = '<div class="empty-note">Ainda não geraste nenhum script.</div>'; return; }
+  el.innerHTML = '';
+  state.history.slice().reverse().forEach(h => {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    row.innerHTML = `<div class="left">
+        <i class="fa fa-star fav ${h.fav ? 'active' : ''}" onclick="toggleFav('${h.id}', event)"></i>
+        <div><div class="name">${h.prompt.slice(0,40)}${h.prompt.length>40?'…':''}</div><div class="meta">${h.date} · ${h.lines} linhas</div></div>
+      </div>
+      <button class="btn secondary" style="padding:6px 12px; font-size:12px;" onclick="restoreHistory('${h.id}')">Restaurar</button>`;
+    el.appendChild(row);
+  });
+}
+function renderHistoryMini() {
+  const el = document.getElementById('history-mini-list');
+  if (!state.history.length) { el.textContent = 'Sem gerações ainda.'; return; }
+  el.innerHTML = '';
+  state.history.slice().reverse().slice(0,6).forEach(h => {
+    const d = document.createElement('div');
+    d.textContent = '• ' + h.prompt.slice(0, 26) + (h.prompt.length > 26 ? '…' : '');
+    el.appendChild(d);
+  });
+}
+function toggleFav(id, ev) {
+  ev.stopPropagation();
+  const h = state.history.find(x => x.id === id);
+  if (h) { h.fav = !h.fav; saveHistory(); renderDashHistory(); }
+}
+function restoreHistory(id) {
+  const h = state.history.find(x => x.id === id);
+  if (!h) return;
+  openWorkspace();
+  createTab(h.prompt.slice(0,18) || 'Script', h.script, 'ServerScriptService');
+  toast('Geração restaurada', 'fa-history');
+}
+
+async function startPipeline() {
+  const rawPrompt = document.getElementById('ai-prompt').value.trim();
+  if (!rawPrompt) { toast('Escreve o que queres construir primeiro.', 'fa-exclamation-circle'); return; }
+  const genBtn = document.getElementById('generate-btn');
+  genBtn.disabled = true;
+  setProgress(0, 'A melhorar o teu pedido...');
+
+  const limitMode = document.getElementById('limit-select').value;
+  const reducido = limitMode === "4";
+  const normalCount = reducido ? 2 : 3;
+  const guiCount = reducido ? 1 : 2;
+  const buildCount = reducido ? 1 : 2;
+  const totalSteps = 1 + normalCount + guiCount + buildCount + 1;
+  let doneSteps = 0;
+  function tick(label) { doneSteps++; setProgress(Math.round((doneSteps / totalSteps) * 100), label); }
+
+  try {
+    const improvePrompt = `Melhora este pedido de script Roblox Luau, tornando-o mais claro e completo tecnicamente, mas mantém curto (max 4 frases): "${rawPrompt}"`;
+    const improved = await callAI(improvePrompt);
+    tick('A gerar lógica principal...');
+
+    const normalResults = [];
+    for (let i = 0; i < normalCount; i++) {
+      normalResults.push(await callAI(`Escreve um script Luau (parte "normal"/lógica de jogo) para Roblox Studio com base em: ${improved}. Devolve só código Lua comentado, sem explicações.`));
+      tick('A gerar lógica principal...');
+    }
+    const guiResults = [];
+    for (let i = 0; i < guiCount; i++) {
+      guiResults.push(await callAI(`Escreve um script Luau de interface (GUI/ScreenGui, LocalScript) para Roblox Studio com base em: ${improved}. Devolve só código Lua comentado, sem explicações.`));
+      tick('A gerar interface (GUI)...');
+    }
+    const buildResults = [];
+    for (let i = 0; i < buildCount; i++) {
+      buildResults.push(await callAI(`Escreve um script Luau de build/construção de objetos no Workspace para Roblox Studio com base em: ${improved}. Devolve só código Lua comentado, sem explicações.`));
+      tick('A construir objetos no Workspace...');
+    }
+
+    const mergePrompt = `Junta estas partes de código Luau num script único, completo e coerente para Roblox Studio. Organiza claramente com comentários indicando onde cada parte deve ficar no Explorer (Workspace, StarterPlayerScripts, StarterCharacterScripts, StarterGui). Não expliques nada fora do código.
+Partes normais:
+${normalResults.join('\n---\n')}
+Partes GUI:
+${guiResults.join('\n---\n')}
+Partes build:
+${buildResults.join('\n---\n')}`;
+    let finalScript = await callAI(mergePrompt);
+    tick('A juntar tudo...');
+
+    finalScript = finalScript.repeat(state.doubleMultiplier);
+    const lineCount = finalScript.split('\n').length;
+    const cost = costForLines(lineCount) * state.doubleMultiplier;
+
+    if (state.credits !== Infinity) {
+      if (state.credits < cost) { toast('Créditos insuficientes.', 'fa-exclamation-triangle'); genBtn.disabled = false; return; }
+      state.credits -= cost;
+      updateCreditsDisplay();
+    }
+
+    const tabName = rawPrompt.slice(0, 18) || 'Script';
+    createTab(tabName, finalScript, document.getElementById('opt-location').value);
+
+    state.history.push({ id: 'h' + Date.now(), prompt: rawPrompt, script: finalScript, lines: lineCount,
+      date: new Date().toLocaleDateString('pt-PT'), fav: false });
+    saveHistory();
+    renderHistoryMini();
+
+    document.getElementById('double-btn').disabled = false;
+    toast(`Geração concluída · ${cost.toFixed(2)} créditos usados`, 'fa-check-circle');
+
+  } catch (e) {
+    toast('Ocorreu um erro a gerar o script.', 'fa-exclamation-triangle');
+    console.error(e);
+  } finally {
+    genBtn.disabled = false;
+    setProgress(100, 'Concluído');
+    setTimeout(() => { document.getElementById('progress-wrap').style.display = 'none'; }, 1500);
+  }
+}
+function doubleWork() {
+  state.doubleMultiplier *= 2;
+  toast('Multiplicador em x' + state.doubleMultiplier + '. Gera novamente para aplicar.', 'fa-clone');
+}
+
+renderTree();
+document.getElementById('screen-login').style.display = 'flex';
+window.addEventListener('load', () => setTimeout(initGoogleLogin, 300));
+</script>
+</body>
+</html>
